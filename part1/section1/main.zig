@@ -5,11 +5,13 @@
 const std = @import("std");
 
 pub fn main() !void {
-    const file = try std.fs.openFileAbsolute("/home/matt/code/perf-aware/part1/section1/single_register_mov.asm", .{});
+    const file = try std.fs.openFileAbsolute("/home/matt/code/perf-aware/part1/section1/single_register_mov", .{});
     const file_reader = file.reader();
 
-    const first_byte = try file_reader.readByte();
-    const second_byte = try file_reader.readByte();
+    while (true) {
+        const read_byte_result = file_reader.readByte() catch break;
+        std.debug.print("{b}\n", .{read_byte_result});
+    }
 
-    std.debug.print("{b} {b}\n", .{ first_byte, second_byte });
+    std.debug.print("Done\n", .{});
 }
