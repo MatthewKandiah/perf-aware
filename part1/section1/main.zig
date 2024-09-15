@@ -5,6 +5,14 @@
 const std = @import("std");
 
 pub fn main() !void {
+    var arena_state = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    defer arena_state.deinit();
+    const arena = arena_state.allocator();
+
+    const args = try std.process.argsAlloc(arena);
+    if (args.len != 3) std.debug.panic("Requires 2 command line arguments", .{});
+    std.debug.print("arg0 = {s}, arg1 = {s}, arg2 = {s}", .{ args[0], args[1], args[2] });
+
     // const input_file = try std.fs.openFileAbsolute("/home/matt/code/perf-aware/part1/section1/single_register_mov", .{});
     const input_file = try std.fs.openFileAbsolute("/home/matt/code/perf-aware/part1/section1/many_register_mov", .{});
     defer input_file.close();
