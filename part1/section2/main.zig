@@ -33,13 +33,29 @@ pub fn main() !void {
                     const addr_byte2 = if (r_m == 0b110) try file_reader.readByte() else null;
                     const direct_address: u16 = if (addr_byte1 != null and addr_byte2 != null) (@as(u16, @intCast(addr_byte2.?)) << 8) & (@as(u16, @intCast(addr_byte2.?))) else undefined;
                     _ = try output_file.write("mov ");
-                    _ = try output_file.write(try r_m_mod0_lookup(r_m, direct_address));
+                    if (d == 0) {
+                        _ = try output_file.write(try r_m_mod0_lookup(r_m, direct_address));
+                        _ = try output_file.write(", ");
+                        _ = try output_file.write((try reg_lookup(reg, w)).toString());
+                    } else {
+                        _ = try output_file.write((try reg_lookup(reg, w)).toString());
+                        _ = try output_file.write(", ");
+                        _ = try output_file.write(try r_m_mod0_lookup(r_m, direct_address));
+                    }
                     _ = try output_file.write("\n");
                 },
                 0b01 => {
                     const displacement = try file_reader.readByte();
                     _ = try output_file.write("mov ");
-                    _ = try output_file.write(try r_m_mod1_lookup(r_m, displacement));
+                    if (d == 0) {
+                        _ = try output_file.write(try r_m_mod1_lookup(r_m, displacement));
+                        _ = try output_file.write(", ");
+                        _ = try output_file.write((try reg_lookup(reg, w)).toString());
+                    } else {
+                        _ = try output_file.write((try reg_lookup(reg, w)).toString());
+                        _ = try output_file.write(", ");
+                        _ = try output_file.write(try r_m_mod1_lookup(r_m, displacement));
+                    }
                     _ = try output_file.write("\n");
                 },
                 0b10 => {
@@ -47,7 +63,15 @@ pub fn main() !void {
                     const disp_hi = try file_reader.readByte();
                     const displacement: u16 = (@as(u16, @intCast(disp_hi)) << 8) | @as(u16, @intCast(disp_lo));
                     _ = try output_file.write("mov ");
-                    _ = try output_file.write(try r_m_mod2_lookup(r_m, displacement));
+                    if (d == 0) {
+                        _ = try output_file.write(try r_m_mod2_lookup(r_m, displacement));
+                        _ = try output_file.write(", ");
+                        _ = try output_file.write((try reg_lookup(reg, w)).toString());
+                    } else {
+                        _ = try output_file.write((try reg_lookup(reg, w)).toString());
+                        _ = try output_file.write(", ");
+                        _ = try output_file.write(try r_m_mod2_lookup(r_m, displacement));
+                    }
                     _ = try output_file.write("\n");
                 },
                 0b11 => {
