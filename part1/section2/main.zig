@@ -18,7 +18,35 @@ pub fn main() !void {
         const first_byte = file_reader.readByte() catch break;
 
         if ((first_byte & imm_to_reg_opcode_mask) >> 4 == imm_to_reg_opcode) {
-            std.debug.print("imm_to_reg operation\n", .{});
+            const w = (first_byte & imm_to_reg_w_mask) >> 3;
+            const reg = (first_byte & imm_to_reg_reg_mask);
+            var buf: [64]u8 = undefined;
+            switch (w) {
+                0 => {
+                    const data: i8 = @bitCast(try file_reader.readByte());
+                    _ = try output_file.write("mov ");
+                    _ = try output_file.write((try reg_lookup(reg, w)).toString());
+                    _ = try output_file.write(", ");
+                    _ = try output_file.write(try std.fmt.bufPrint(&buf, "{}", .{data}));
+                    _ = try output_file.write("\n");
+                },
+                1 => {
+                    const data_lo = try file_reader.readByte();
+                    const data_hi = try file_reader.readByte();
+                    const data_combined: u16 = (@as(u16, @intCast(data_hi)) << 8) & @as(u16, @intCast(data_lo));
+                    std.debug.print("lo: {b}", .{data_lo});
+                    std.debug.print("hi: {b}", .{data_hi});
+                    std.debug.print("combined: {b}", .{data_combined});
+                    std.debug.print("\n", .{});
+                    const data: i16 = @bitCast(data_combined);
+                    _ = try output_file.write("mov ");
+                    _ = try output_file.write((try reg_lookup(reg, w)).toString());
+                    _ = try output_file.write(", ");
+                    _ = try output_file.write(try std.fmt.bufPrint(&buf, "{}", .{data}));
+                    _ = try output_file.write("\n");
+                },
+                else => unreachable,
+            }
         } else if ((first_byte & mov_opcode_mask) >> 2 == mov_opcode) {
             const d = (first_byte & mov_d_mask) >> 1;
             const w = (first_byte & mov_w_mask);
