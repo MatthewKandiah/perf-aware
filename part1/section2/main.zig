@@ -55,7 +55,7 @@ pub fn main() !void {
                 0b00 => {
                     const addr_byte1 = if (r_m == 0b110) try file_reader.readByte() else null;
                     const addr_byte2 = if (r_m == 0b110) try file_reader.readByte() else null;
-                    const direct_address: u16 = if (addr_byte1 != null and addr_byte2 != null) (@as(u16, @intCast(addr_byte2.?)) << 8) & (@as(u16, @intCast(addr_byte2.?))) else undefined;
+                    const direct_address: u16 = if (addr_byte1 != null and addr_byte2 != null) (@as(u16, @intCast(addr_byte2.?)) << 8) & (@as(u16, @intCast(addr_byte1.?))) else undefined;
                     _ = try output_file.write("mov ");
                     if (d == 0) {
                         _ = try output_file.write(try r_m_mod0_lookup(r_m, direct_address));
