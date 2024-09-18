@@ -33,11 +33,7 @@ pub fn main() !void {
                 1 => {
                     const data_lo = try file_reader.readByte();
                     const data_hi = try file_reader.readByte();
-                    const data_combined: u16 = (@as(u16, @intCast(data_hi)) << 8) & @as(u16, @intCast(data_lo));
-                    std.debug.print("lo: {b}", .{data_lo});
-                    std.debug.print("hi: {b}", .{data_hi});
-                    std.debug.print("combined: {b}", .{data_combined});
-                    std.debug.print("\n", .{});
+                    const data_combined: u16 = (@as(u16, @intCast(data_hi)) << 8) + (@as(u16, @intCast(data_lo)));
                     const data: i16 = @bitCast(data_combined);
                     _ = try output_file.write("mov ");
                     _ = try output_file.write((try reg_lookup(reg, w)).toString());
