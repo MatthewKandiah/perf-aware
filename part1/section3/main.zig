@@ -47,9 +47,9 @@ pub fn main() !void {
             const d = (first_byte & mov_d_mask) >> 1;
             const w = (first_byte & mov_w_mask);
             const second_byte = try file_reader.readByte();
-            const mod = (second_byte & mov_mod_mask) >> 6;
-            const reg = (second_byte & mov_reg_mask) >> 3;
-            const r_m = (second_byte & mov_r_m_mask);
+            const mod = (second_byte & mod_mask) >> 6;
+            const reg = (second_byte & reg_mask) >> 3;
+            const r_m = (second_byte & r_m_mask);
 
             switch (mod) {
                 0b00 => {
@@ -120,9 +120,9 @@ const mov_opcode = 0b100010;
 const mov_opcode_mask = 0b11111100;
 const mov_d_mask = 0b00000010;
 const mov_w_mask = 0b00000001;
-const mov_mod_mask = 0b11000000;
-const mov_reg_mask = 0b00111000;
-const mov_r_m_mask = 0b00000111;
+const mod_mask = 0b11000000;
+const reg_mask = 0b00111000;
+const r_m_mask = 0b00000111;
 
 const imm_to_reg_opcode = 0b1011;
 const imm_to_reg_opcode_mask = 0b11110000;
