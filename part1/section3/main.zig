@@ -16,6 +16,7 @@ pub fn main() !void {
 
     _ = try output_file.write("bits 16\n\n");
 
+    var buf: [64]u8 = undefined;
     while (true) {
         const first_byte = file_reader.readByte() catch break;
 
@@ -23,7 +24,6 @@ pub fn main() !void {
             _ = try output_file.write("mov ");
             const w = (first_byte & mov_imm_to_reg_w_mask) >> 3;
             const reg = (first_byte & mov_imm_to_reg_reg_mask);
-            var buf: [64]u8 = undefined;
             switch (w) {
                 0 => {
                     const num_string = try readNextByteToNumString(i8, file_reader, &buf);
@@ -43,12 +43,11 @@ pub fn main() !void {
             _ = try output_file.write("mov ");
             const d = (first_byte & mov_d_mask) >> 1;
             const w = (first_byte & mov_w_mask);
-            const second_byte = try file_reader.readByte();
-            const mod = (second_byte & mov_mod_mask) >> 6;
-            const reg = (second_byte & mov_reg_mask) >> 3;
-            const r_m = (second_byte & mov_r_m_mask);
+            const mod_reg_rm = try readAndParseModRegRmByte(file_reader);
+            const mod = mod_reg_rm.mod;
+            const reg = mod_reg_rm.reg;
+            const r_m = mod_reg_rm.r_m;
 
-            var buf: [64]u8 = undefined;
             switch (mod) {
                 0b00 => {
                     const direct_address: ?[]const u8 = if (r_m == 0b110) try readNext2BytesToNumString(u16, file_reader, &buf) else null;
@@ -103,14 +102,14 @@ pub fn main() !void {
     }
 }
 
+const mod_mask = 0b11000000;
+const reg_mask = 0b00111000;
+const r_m_mask = 0b00000111;
+
 const mov_opcode = 0b100010;
 const mov_opcode_mask = 0b11111100;
 const mov_d_mask = 0b00000010;
 const mov_w_mask = 0b00000001;
-const mov_mod_mask = 0b11000000;
-const mov_reg_mask = 0b00111000;
-const mov_r_m_mask = 0b00000111;
-
 const mov_imm_to_reg_opcode = 0b1011;
 const mov_imm_to_reg_opcode_mask = 0b11110000;
 const mov_imm_to_reg_w_mask = 0b00001000;
@@ -252,4 +251,18 @@ fn readNext2BytesToNumString(comptime T: type, reader: std.fs.File.Reader, buf: 
     const data_combined: u16 = (@as(u16, @intCast(data_hi)) << 8) + (@as(u16, @intCast(data_lo)));
     const data: T = @bitCast(data_combined);
     return std.fmt.bufPrint(buf, "{}", .{data});
+}
+
+const ModRegRm = struct {
+    mod: u8,
+    reg: u8,
+    r_m: u8,
+};
+
+fn readAndParseModRegRmByte(reader: std.fs.File.Reader) !ModRegRm {
+    const byte = try reader.readByte();
+    const mod = (byte & mod_mask) >> 6;
+    const reg = (byte & reg_mask) >> 3;
+    const r_m = (byte & r_m_mask);
+    return .{ .mod = mod, .reg = reg, .r_m = r_m };
 }
