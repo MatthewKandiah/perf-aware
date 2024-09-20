@@ -5,13 +5,13 @@
 const std = @import("std");
 
 pub fn main() !void {
-    const input_file = try std.fs.openFileAbsolute("/home/matt/code/perf-aware/part1/section3/add_sub_cmp_jnz", .{});
-    // const input_file = try std.fs.openFileAbsolute("/home/matt/code/perf-aware/part1/section3/more_movs", .{});
+    // const input_file = try std.fs.openFileAbsolute("/home/matt/code/perf-aware/part1/section3/add_sub_cmp_jnz", .{});
+    const input_file = try std.fs.openFileAbsolute("/home/matt/code/perf-aware/part1/section3/more_movs", .{});
     defer input_file.close();
     const file_reader = input_file.reader();
 
-    const output_file = try std.fs.createFileAbsolute("/home/matt/code/perf-aware/part1/section3/add_sub_cmp_jnz_out.asm", .{});
-    // const output_file = try std.fs.createFileAbsolute("/home/matt/code/perf-aware/part1/section3/more_movs_out.asm", .{});
+    // const output_file = try std.fs.createFileAbsolute("/home/matt/code/perf-aware/part1/section3/add_sub_cmp_jnz_out.asm", .{});
+    const output_file = try std.fs.createFileAbsolute("/home/matt/code/perf-aware/part1/section3/more_movs_out.asm", .{});
     defer output_file.close();
 
     _ = try output_file.write("bits 16\n\n");
@@ -26,19 +26,16 @@ pub fn main() !void {
             var buf: [64]u8 = undefined;
             switch (w) {
                 0 => {
-                    const data: i8 = @bitCast(try file_reader.readByte());
+                    const num_string = try readNextByteToNumString(i8, file_reader, &buf);
                     _ = try output_file.write((try reg_lookup(reg, w)).toString());
                     _ = try output_file.write(", ");
-                    _ = try output_file.write(try std.fmt.bufPrint(&buf, "{}", .{data}));
+                    _ = try output_file.write(num_string);
                 },
                 1 => {
-                    const data_lo = try file_reader.readByte();
-                    const data_hi = try file_reader.readByte();
-                    const data_combined: u16 = (@as(u16, @intCast(data_hi)) << 8) + (@as(u16, @intCast(data_lo)));
-                    const data: i16 = @bitCast(data_combined);
+                    const num_string = try readNext2BytesToNumString(i16, file_reader, &buf);
                     _ = try output_file.write((try reg_lookup(reg, w)).toString());
                     _ = try output_file.write(", ");
-                    _ = try output_file.write(try std.fmt.bufPrint(&buf, "{}", .{data}));
+                    _ = try output_file.write(num_string);
                 },
                 else => unreachable,
             }
@@ -53,9 +50,8 @@ pub fn main() !void {
 
             switch (mod) {
                 0b00 => {
-                    const addr_byte1 = if (r_m == 0b110) try file_reader.readByte() else null;
-                    const addr_byte2 = if (r_m == 0b110) try file_reader.readByte() else null;
-                    const direct_address: u16 = if (addr_byte1 != null and addr_byte2 != null) (@as(u16, @intCast(addr_byte2.?)) << 8) & (@as(u16, @intCast(addr_byte1.?))) else undefined;
+                    var buf: [64]u8 = undefined;
+                    const direct_address: ?[]const u8 = if (r_m == 0b110) try readNext2BytesToNumString(u16, file_reader, &buf) else null;
                     if (d == 0) {
                         _ = try output_file.write(try r_m_mod0_lookup(r_m, direct_address));
                         _ = try output_file.write(", ");
@@ -164,7 +160,7 @@ const Register = enum {
     }
 };
 
-fn r_m_mod0_lookup(r_m: u8, direct_address: ?u16) ![]const u8 {
+fn r_m_mod0_lookup(r_m: u8, direct_address_string: ?[]const u8) ![]const u8 {
     return switch (r_m) {
         0b000 => "[" ++ Register.BX.toString() ++ " + " ++ Register.SI.toString() ++ "]",
         0b001 => "[" ++ Register.BX.toString() ++ " + " ++ Register.DI.toString() ++ "]",
@@ -174,7 +170,7 @@ fn r_m_mod0_lookup(r_m: u8, direct_address: ?u16) ![]const u8 {
         0b101 => "[" ++ Register.DI.toString() ++ "]",
         0b110 => {
             var buf: [64]u8 = undefined;
-            return std.fmt.bufPrint(&buf, "[{}]", .{direct_address.?});
+            return std.fmt.bufPrint(&buf, "[{s}]", .{direct_address_string.?});
         },
         0b111 => "[" ++ Register.BX.toString() ++ "]",
         else => unreachable,
@@ -245,4 +241,17 @@ fn reg_w1_lookup(reg: u8) !Register {
         0b111 => .DI,
         else => error.InvalidReg,
     };
+}
+
+fn readNextByteToNumString(comptime T: type, reader: std.fs.File.Reader, buf: []u8) ![]const u8 {
+    const data: T = @bitCast(try reader.readByte());
+    return std.fmt.bufPrint(buf, "{}", .{data});
+}
+
+fn readNext2BytesToNumString(comptime T: type, reader: std.fs.File.Reader, buf: []u8) ![]const u8 {
+    const data_lo = try reader.readByte();
+    const data_hi = try reader.readByte();
+    const data_combined: u16 = (@as(u16, @intCast(data_hi)) << 8) + (@as(u16, @intCast(data_lo)));
+    const data: T = @bitCast(data_combined);
+    return std.fmt.bufPrint(buf, "{}", .{data});
 }
