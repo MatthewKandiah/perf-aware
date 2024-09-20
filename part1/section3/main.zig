@@ -5,13 +5,13 @@
 const std = @import("std");
 
 pub fn main() !void {
-    // const input_file = try std.fs.openFileAbsolute("/home/matt/code/perf-aware/part1/section3/add_sub_cmp_jnz", .{});
-    const input_file = try std.fs.openFileAbsolute("/home/matt/code/perf-aware/part1/section3/more_movs", .{});
+    const input_file = try std.fs.openFileAbsolute("/home/matt/code/perf-aware/part1/section3/add_sub_cmp_jnz", .{});
+    // const input_file = try std.fs.openFileAbsolute("/home/matt/code/perf-aware/part1/section3/more_movs", .{});
     defer input_file.close();
     const file_reader = input_file.reader();
 
-    // const output_file = try std.fs.createFileAbsolute("/home/matt/code/perf-aware/part1/section3/add_sub_cmp_jnz_out.asm", .{});
-    const output_file = try std.fs.createFileAbsolute("/home/matt/code/perf-aware/part1/section3/more_movs_out.asm", .{});
+    const output_file = try std.fs.createFileAbsolute("/home/matt/code/perf-aware/part1/section3/add_sub_cmp_jnz_out.asm", .{});
+    // const output_file = try std.fs.createFileAbsolute("/home/matt/code/perf-aware/part1/section3/more_movs_out.asm", .{});
     defer output_file.close();
 
     _ = try output_file.write("bits 16\n\n");
