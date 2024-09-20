@@ -5,11 +5,13 @@
 const std = @import("std");
 
 pub fn main() !void {
-    const input_file = try std.fs.openFileAbsolute("/home/matt/code/perf-aware/part1/section3/add_sub_cmp_jnz", .{});
+    // const input_file = try std.fs.openFileAbsolute("/home/matt/code/perf-aware/part1/section3/add_sub_cmp_jnz", .{});
+    const input_file = try std.fs.openFileAbsolute("/home/matt/code/perf-aware/part1/section3/more_movs", .{});
     defer input_file.close();
     const file_reader = input_file.reader();
 
-    const output_file = try std.fs.createFileAbsolute("/home/matt/code/perf-aware/part1/section3/add_sub_cmp_jnz_out.asm", .{});
+    // const output_file = try std.fs.createFileAbsolute("/home/matt/code/perf-aware/part1/section3/add_sub_cmp_jnz_out.asm", .{});
+    const output_file = try std.fs.createFileAbsolute("/home/matt/code/perf-aware/part1/section3/more_movs_out.asm", .{});
     defer output_file.close();
 
     _ = try output_file.write("bits 16\n\n");
@@ -18,32 +20,30 @@ pub fn main() !void {
         const first_byte = file_reader.readByte() catch break;
 
         if ((first_byte & imm_to_reg_opcode_mask) >> 4 == imm_to_reg_opcode) {
+            _ = try output_file.write("mov ");
             const w = (first_byte & imm_to_reg_w_mask) >> 3;
             const reg = (first_byte & imm_to_reg_reg_mask);
             var buf: [64]u8 = undefined;
             switch (w) {
                 0 => {
                     const data: i8 = @bitCast(try file_reader.readByte());
-                    _ = try output_file.write("mov ");
                     _ = try output_file.write((try reg_lookup(reg, w)).toString());
                     _ = try output_file.write(", ");
                     _ = try output_file.write(try std.fmt.bufPrint(&buf, "{}", .{data}));
-                    _ = try output_file.write("\n");
                 },
                 1 => {
                     const data_lo = try file_reader.readByte();
                     const data_hi = try file_reader.readByte();
                     const data_combined: u16 = (@as(u16, @intCast(data_hi)) << 8) + (@as(u16, @intCast(data_lo)));
                     const data: i16 = @bitCast(data_combined);
-                    _ = try output_file.write("mov ");
                     _ = try output_file.write((try reg_lookup(reg, w)).toString());
                     _ = try output_file.write(", ");
                     _ = try output_file.write(try std.fmt.bufPrint(&buf, "{}", .{data}));
-                    _ = try output_file.write("\n");
                 },
                 else => unreachable,
             }
         } else if ((first_byte & mov_opcode_mask) >> 2 == mov_opcode) {
+            _ = try output_file.write("mov ");
             const d = (first_byte & mov_d_mask) >> 1;
             const w = (first_byte & mov_w_mask);
             const second_byte = try file_reader.readByte();
@@ -56,7 +56,6 @@ pub fn main() !void {
                     const addr_byte1 = if (r_m == 0b110) try file_reader.readByte() else null;
                     const addr_byte2 = if (r_m == 0b110) try file_reader.readByte() else null;
                     const direct_address: u16 = if (addr_byte1 != null and addr_byte2 != null) (@as(u16, @intCast(addr_byte2.?)) << 8) & (@as(u16, @intCast(addr_byte1.?))) else undefined;
-                    _ = try output_file.write("mov ");
                     if (d == 0) {
                         _ = try output_file.write(try r_m_mod0_lookup(r_m, direct_address));
                         _ = try output_file.write(", ");
@@ -66,11 +65,9 @@ pub fn main() !void {
                         _ = try output_file.write(", ");
                         _ = try output_file.write(try r_m_mod0_lookup(r_m, direct_address));
                     }
-                    _ = try output_file.write("\n");
                 },
                 0b01 => {
                     const displacement = try file_reader.readByte();
-                    _ = try output_file.write("mov ");
                     if (d == 0) {
                         _ = try output_file.write(try r_m_mod1_lookup(r_m, displacement));
                         _ = try output_file.write(", ");
@@ -80,13 +77,11 @@ pub fn main() !void {
                         _ = try output_file.write(", ");
                         _ = try output_file.write(try r_m_mod1_lookup(r_m, displacement));
                     }
-                    _ = try output_file.write("\n");
                 },
                 0b10 => {
                     const disp_lo = try file_reader.readByte();
                     const disp_hi = try file_reader.readByte();
                     const displacement: u16 = (@as(u16, @intCast(disp_hi)) << 8) | @as(u16, @intCast(disp_lo));
-                    _ = try output_file.write("mov ");
                     if (d == 0) {
                         _ = try output_file.write(try r_m_mod2_lookup(r_m, displacement));
                         _ = try output_file.write(", ");
@@ -96,7 +91,6 @@ pub fn main() !void {
                         _ = try output_file.write(", ");
                         _ = try output_file.write(try r_m_mod2_lookup(r_m, displacement));
                     }
-                    _ = try output_file.write("\n");
                 },
                 0b11 => {
                     const reg_register = try reg_lookup(reg, w);
@@ -104,15 +98,14 @@ pub fn main() !void {
                     const source_register = if (d == 0) reg_register else r_m_register;
                     const dest_register = if (d == 0) r_m_register else reg_register;
 
-                    _ = try output_file.write("mov ");
                     _ = try output_file.write(dest_register.toString());
                     _ = try output_file.write(", ");
                     _ = try output_file.write(source_register.toString());
-                    _ = try output_file.write("\n");
                 },
                 else => unreachable,
             }
         }
+        _ = try output_file.write("\n");
     }
 }
 
