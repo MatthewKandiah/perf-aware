@@ -19,10 +19,10 @@ pub fn main() !void {
     while (true) {
         const first_byte = file_reader.readByte() catch break;
 
-        if ((first_byte & imm_to_reg_opcode_mask) >> 4 == imm_to_reg_opcode) {
+        if ((first_byte & mov_imm_to_reg_opcode_mask) >> 4 == mov_imm_to_reg_opcode) {
             _ = try output_file.write("mov ");
-            const w = (first_byte & imm_to_reg_w_mask) >> 3;
-            const reg = (first_byte & imm_to_reg_reg_mask);
+            const w = (first_byte & mov_imm_to_reg_w_mask) >> 3;
+            const reg = (first_byte & mov_imm_to_reg_reg_mask);
             var buf: [64]u8 = undefined;
             switch (w) {
                 0 => {
@@ -47,9 +47,9 @@ pub fn main() !void {
             const d = (first_byte & mov_d_mask) >> 1;
             const w = (first_byte & mov_w_mask);
             const second_byte = try file_reader.readByte();
-            const mod = (second_byte & mod_mask) >> 6;
-            const reg = (second_byte & reg_mask) >> 3;
-            const r_m = (second_byte & r_m_mask);
+            const mod = (second_byte & mov_mod_mask) >> 6;
+            const reg = (second_byte & mov_reg_mask) >> 3;
+            const r_m = (second_byte & mov_r_m_mask);
 
             switch (mod) {
                 0b00 => {
@@ -113,14 +113,14 @@ const mov_opcode = 0b100010;
 const mov_opcode_mask = 0b11111100;
 const mov_d_mask = 0b00000010;
 const mov_w_mask = 0b00000001;
-const mod_mask = 0b11000000;
-const reg_mask = 0b00111000;
-const r_m_mask = 0b00000111;
+const mov_mod_mask = 0b11000000;
+const mov_reg_mask = 0b00111000;
+const mov_r_m_mask = 0b00000111;
 
-const imm_to_reg_opcode = 0b1011;
-const imm_to_reg_opcode_mask = 0b11110000;
-const imm_to_reg_w_mask = 0b00001000;
-const imm_to_reg_reg_mask = 0b00000111;
+const mov_imm_to_reg_opcode = 0b1011;
+const mov_imm_to_reg_opcode_mask = 0b11110000;
+const mov_imm_to_reg_w_mask = 0b00001000;
+const mov_imm_to_reg_reg_mask = 0b00000111;
 
 const Register = enum {
     AX,
