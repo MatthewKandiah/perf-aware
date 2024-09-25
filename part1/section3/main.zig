@@ -4,14 +4,19 @@
 
 const std = @import("std");
 
+const regression_test = true;
+const input_file_path =
+    if (regression_test) "/home/matt/code/perf-aware/part1/section3/more_movs" else "/home/matt/code/perf-aware/part1/section3/add_sub_cmp_jnz";
+
+const output_file_path =
+    if (regression_test) "/home/matt/code/perf-aware/part1/section3/more_movs_out.asm" else "/home/matt/code/perf-aware/part1/section3/add_sub_cmp_jnz_out.asm";
+
 pub fn main() !void {
-    // const input_file = try std.fs.openFileAbsolute("/home/matt/code/perf-aware/part1/section3/add_sub_cmp_jnz", .{});
-    const input_file = try std.fs.openFileAbsolute("/home/matt/code/perf-aware/part1/section3/more_movs", .{});
+    const input_file = try std.fs.openFileAbsolute(input_file_path, .{});
     defer input_file.close();
     const file_reader = input_file.reader();
 
-    // const output_file = try std.fs.createFileAbsolute("/home/matt/code/perf-aware/part1/section3/add_sub_cmp_jnz_out.asm", .{});
-    const output_file = try std.fs.createFileAbsolute("/home/matt/code/perf-aware/part1/section3/more_movs_out.asm", .{});
+    const output_file = try std.fs.createFileAbsolute(output_file_path, .{});
     defer output_file.close();
 
     _ = try output_file.write("bits 16\n\n");
@@ -19,11 +24,10 @@ pub fn main() !void {
     var buf: [64]u8 = undefined;
     while (true) {
         const first_byte = file_reader.readByte() catch break;
-
-        if ((first_byte & mov_imm_to_reg_opcode_mask) >> 4 == mov_imm_to_reg_opcode) {
+        if (mov_imm_to_reg_opcode_mask.apply(first_byte) == mov_imm_to_reg_opcode) {
             _ = try output_file.write("mov ");
-            const w = (first_byte & mov_imm_to_reg_w_mask) >> 3;
-            const reg = (first_byte & mov_imm_to_reg_reg_mask);
+            const w = mov_imm_to_reg_w_mask.apply(first_byte);
+            const reg = mov_imm_to_reg_reg_mask.apply(first_byte);
             switch (w) {
                 0 => {
                     const num_string = try readNextByteToNumString(i8, file_reader, &buf);
@@ -39,10 +43,13 @@ pub fn main() !void {
                 },
                 else => unreachable,
             }
-        } else if ((first_byte & mov_opcode_mask) >> 2 == mov_opcode) {
-            _ = try output_file.write("mov ");
-            const d = (first_byte & mov_d_mask) >> 1;
-            const w = (first_byte & mov_w_mask);
+        } else if (byteMatchesSixDigitOpcode(first_byte)) {
+            _ = try output_file.write(switch (SixDigitOpcode.fromValue(six_digit_opcode_mask.apply(first_byte))) {
+                .mov => "mov ",
+                .add => "add ",
+            });
+            const d = d_mask.apply(first_byte);
+            const w = w_mask.apply(first_byte);
             const mod_reg_rm = try readAndParseModRegRmByte(file_reader);
             const mod = mod_reg_rm.mod;
             const reg = mod_reg_rm.reg;
@@ -102,18 +109,97 @@ pub fn main() !void {
     }
 }
 
-const mod_mask = 0b11000000;
-const reg_mask = 0b00111000;
-const r_m_mask = 0b00000111;
+const Mask = struct {
+    value: u8,
+    shift: u3,
 
-const mov_opcode = 0b100010;
-const mov_opcode_mask = 0b11111100;
-const mov_d_mask = 0b00000010;
-const mov_w_mask = 0b00000001;
+    const Self = @This();
+
+    fn apply(self: Self, byte: u8) u8 {
+        return (byte & self.value) >> self.shift;
+    }
+};
+
+const mod_mask = Mask{
+    .value = 0b11000000,
+    .shift = 6,
+};
+
+const reg_mask = Mask{
+    .value = 0b00111000,
+    .shift = 3,
+};
+
+const rm_mask = Mask{
+    .value = 0b00000111,
+    .shift = 0,
+};
+
+const six_digit_opcode_mask = Mask{
+    .value = 0b11111100,
+    .shift = 2,
+};
+
+const d_mask = Mask{
+    .value = 0b00000010,
+    .shift = 1,
+};
+
+const w_mask = Mask{
+    .value = 0b00000001,
+    .shift = 0,
+};
+
+const mov_imm_to_reg_opcode_mask = Mask{
+    .value = 0b11110000,
+    .shift = 4,
+};
+
+const mov_imm_to_reg_w_mask = Mask{
+    .value = 0b00001000,
+    .shift = 3,
+};
+
+const mov_imm_to_reg_reg_mask = Mask{
+    .value = 0b00000111,
+    .shift = 0,
+};
+
+const SixDigitOpcode = enum(u8) {
+    add = 0b000000,
+    mov = 0b100010,
+
+    const Self = @This();
+
+    fn isMatching(byte: u8) bool {
+        return byte == Self.add.value() or byte == Self.mov.value();
+    }
+
+    fn value(self: Self) u8 {
+        return @intFromEnum(self);
+    }
+
+    fn fromValue(byte: u8) Self {
+        return switch (byte) {
+            Self.add.value() => Self.add,
+            Self.mov.value() => Self.mov,
+            else => unreachable,
+        };
+    }
+
+    fn toString(self: Self) []const u8 {
+        return switch (self) {
+            .add => "add",
+            .mov => "mov",
+        };
+    }
+};
+fn byteMatchesSixDigitOpcode(byte: u8) bool {
+    const candidate = six_digit_opcode_mask.apply(byte);
+    return SixDigitOpcode.isMatching(candidate);
+}
+
 const mov_imm_to_reg_opcode = 0b1011;
-const mov_imm_to_reg_opcode_mask = 0b11110000;
-const mov_imm_to_reg_w_mask = 0b00001000;
-const mov_imm_to_reg_reg_mask = 0b00000111;
 
 const Register = enum {
     AX,
@@ -261,8 +347,8 @@ const ModRegRm = struct {
 
 fn readAndParseModRegRmByte(reader: std.fs.File.Reader) !ModRegRm {
     const byte = try reader.readByte();
-    const mod = (byte & mod_mask) >> 6;
-    const reg = (byte & reg_mask) >> 3;
-    const r_m = (byte & r_m_mask);
+    const mod = mod_mask.apply(byte);
+    const reg = reg_mask.apply(byte);
+    const r_m = rm_mask.apply(byte);
     return .{ .mod = mod, .reg = reg, .r_m = r_m };
 }
