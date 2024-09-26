@@ -20,7 +20,6 @@
 //
 
 const std = @import("std");
-const haversine = @import("haversine.zig").haversine;
 
 pub fn main() void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
