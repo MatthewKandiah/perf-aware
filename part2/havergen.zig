@@ -47,14 +47,14 @@ pub fn main() void {
     const min_degrees = rand.float(f64) * (-180);
     const max_degrees = rand.float(f64) * 180;
     std.debug.print("min_degrees: {d:0>3}\nmax_degrees: {d:0>3}", .{ min_degrees, max_degrees });
+    var print_buf: [1024]u8 = undefined;
     for (0..pair_count) |i| {
         const x0 = generatePointInRange(rand, min_degrees, max_degrees);
         const y0 = generatePointInRange(rand, min_degrees, max_degrees) / 2;
         const x1 = generatePointInRange(rand, min_degrees, max_degrees);
         const y1 = generatePointInRange(rand, min_degrees, max_degrees) / 2;
-        const line = std.fmt.allocPrint(allocator, "\t{{\"x0\":{d:0>12}, \"y0\":{d:0>12}, \"x1\":{d:0>12}, \"y1\":{d:0>12}}}", .{ x0, y0, x1, y1 }) catch fatal(null);
+        const line = std.fmt.bufPrint(&print_buf, "\t{{\"x0\":{d:0>12}, \"y0\":{d:0>12}, \"x1\":{d:0>12}, \"y1\":{d:0>12}}}", .{ x0, y0, x1, y1 }) catch fatal(null);
         _ = writer.write(line) catch fatal(null);
-        allocator.free(line);
         if (i < pair_count - 1) {
             _ = writer.write(",\n") catch fatal(null);
         } else {
