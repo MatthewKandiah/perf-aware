@@ -2,14 +2,14 @@
 //
 // Generate random json input for exercises.
 // Must take argument for number of pairs to generate.
-// Casey recommends adding some clustering in the data generation, so the randomly generated points don't have a predictable sum / average.
-// I also like his suggestion to have the generator print out the expected sum and dumping the expected values to a binary data file for quick debugging and checking.
+// Casey recommends adding some clustering in the data generation, so the randomly generated points don't have a predictable sum / average. Done this.
+// He also suggests having the generator print out the expected sum and dumping the expected values to a binary data file for quick debugging and checking. Not bothering with this until it feels useful.
 //
 //
 // Json schema:
 // {
 //   "pairs": [
-//     "x0": number, "y0": number, "x1": number, "y1": number
+//     {"x0": number, "y0": number, "x1": number, "y1": number}
 //   ]
 // }
 //
