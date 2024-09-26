@@ -52,16 +52,16 @@ pub fn main() void {
         const y0 = generatePointInRange(rand, min_degrees, max_degrees) / 2;
         const x1 = generatePointInRange(rand, min_degrees, max_degrees);
         const y1 = generatePointInRange(rand, min_degrees, max_degrees) / 2;
-        const line = std.fmt.allocPrint(allocator, "\t{{\"x0\":{d:0>12}, \"y0\":{d:0>12}, \"x1\":{d:0>12}, \"y1\":{d:0>12}", .{ x0, y0, x1, y1 }) catch fatal(null);
-        defer allocator.free(line);
+        const line = std.fmt.allocPrint(allocator, "\t{{\"x0\":{d:0>12}, \"y0\":{d:0>12}, \"x1\":{d:0>12}, \"y1\":{d:0>12}}}", .{ x0, y0, x1, y1 }) catch fatal(null);
         _ = writer.write(line) catch fatal(null);
+        allocator.free(line);
         if (i < pair_count - 1) {
             _ = writer.write(",\n") catch fatal(null);
         } else {
             _ = writer.write("\n") catch fatal(null);
         }
     }
-    _ = writer.write("]}}\n") catch fatal(null);
+    _ = writer.write("]}\n") catch fatal(null);
     output_file.close();
 }
 
