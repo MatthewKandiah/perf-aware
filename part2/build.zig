@@ -18,14 +18,22 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    const parse_json_exe = b.addExecutable(.{
+    const parse_json_lib = b.addStaticLibrary(.{
         .name = "parse-json",
         .root_source_file = b.path("parse_json.zig"),
         .target = target,
         .optimize = optimize,
     });
 
+    const main_exe = b.addExecutable(.{
+        .name = "main",
+        .root_source_file = b.path("main.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
     b.installArtifact(haversine_lib);
     b.installArtifact(havergen_exe);
-    b.installArtifact(parse_json_exe);
+    b.installArtifact(parse_json_lib);
+    b.installArtifact(main_exe);
 }
