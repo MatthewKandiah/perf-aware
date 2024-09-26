@@ -35,11 +35,38 @@ pub fn main() void {
     const seed = std.fmt.parseInt(u64, args[1], 10) catch fatal("USAGE: seed argument must be non-negative integer");
     const pair_count = std.fmt.parseInt(u32, args[2], 10) catch fatal("USAGE: pair_count argument must be non-negative integer");
 
+    const output_file_name = std.fmt.allocPrint(allocator, "data_{}_{}.json", .{ seed, pair_count }) catch fatal(null);
+    const output_file = std.fs.cwd().createFile(output_file_name, .{}) catch fatal("Failed to open output file");
+    allocator.free(output_file_name);
+
     var rng = std.rand.DefaultPrng.init(seed);
     const rand = rng.random();
-    for (0..pair_count) |_| {
-        std.debug.print("{}\n", .{rand.float(f64)});
+
+    const writer = output_file.writer();
+    _ = writer.write("{\"pairs\": [\n") catch fatal(null);
+    const min_degrees = rand.float(f64) * (-180);
+    const max_degrees = rand.float(f64) * 180;
+    std.debug.print("min_degrees: {d:0>3}\nmax_degrees: {d:0>3}", .{ min_degrees, max_degrees });
+    for (0..pair_count) |i| {
+        const x0 = generatePointInRange(rand, min_degrees, max_degrees);
+        const y0 = generatePointInRange(rand, min_degrees, max_degrees) / 2;
+        const x1 = generatePointInRange(rand, min_degrees, max_degrees);
+        const y1 = generatePointInRange(rand, min_degrees, max_degrees) / 2;
+        const line = std.fmt.allocPrint(allocator, "\t{{\"x0\":{d:0>12}, \"y0\":{d:0>12}, \"x1\":{d:0>12}, \"y1\":{d:0>12}", .{ x0, y0, x1, y1 }) catch fatal(null);
+        defer allocator.free(line);
+        _ = writer.write(line) catch fatal(null);
+        if (i < pair_count - 1) {
+            _ = writer.write(",\n") catch fatal(null);
+        } else {
+            _ = writer.write("\n") catch fatal(null);
+        }
     }
+    _ = writer.write("]}}\n") catch fatal(null);
+    output_file.close();
+}
+
+fn generatePointInRange(rand: std.Random, min: f64, max: f64) f64 {
+    return rand.float(f64) * (max - min) + min;
 }
 
 fn fatal(message: ?[]const u8) noreturn {
