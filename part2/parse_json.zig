@@ -224,3 +224,12 @@ test "should parse float in scientific notation" {
     const result = parse(test_allocator, fixedBufferStream.reader().any());
     try expectEqual(JsonValue{ .NUMBER = 0.02 }, result);
 }
+
+test "should parse negative number" {
+    var input = ArrayList(u8).init(test_allocator);
+    defer input.deinit();
+    _ = try input.writer().write("-987.654321");
+    var fixedBufferStream = std.io.fixedBufferStream(input.items);
+    const result = parse(test_allocator, fixedBufferStream.reader().any());
+    try expectEqual(JsonValue{ .NUMBER = -987.654321 }, result);
+}
