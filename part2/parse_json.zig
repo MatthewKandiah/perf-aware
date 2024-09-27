@@ -273,3 +273,23 @@ test "should parse string with whitespace" {
     try expect(std.mem.eql(u8, " t e s t ", result.STRING));
     test_allocator.free(result.STRING);
 }
+
+test "should parse string with escaped characters" {
+    var input = ArrayList(u8).init(test_allocator);
+    defer input.deinit();
+    _ = try input.writer().write("\"\\n\\t\"");
+    var fixedBufferStream = std.io.fixedBufferStream(input.items);
+    const result = try parse(test_allocator, fixedBufferStream.reader().any());
+    try expect(std.mem.eql(u8, "\n\t", result.STRING));
+    test_allocator.free(result.STRING);
+}
+
+test "should parse string with escaped quotation marks in it" {
+    var input = ArrayList(u8).init(test_allocator);
+    defer input.deinit();
+    _ = try input.writer().write("\"left \\\" right\"");
+    var fixedBufferStream = std.io.fixedBufferStream(input.items);
+    const result = try parse(test_allocator, fixedBufferStream.reader().any());
+    try expect(std.mem.eql(u8, "left \" right", result.STRING));
+    test_allocator.free(result.STRING);
+}
