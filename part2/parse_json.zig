@@ -12,7 +12,7 @@ pub const ParseError = error{
 };
 
 // NOTE - planning on passing in an arena allocator, so we'll allocate all the memory we need for recursive calls, then clear the whole lot
-//
+
 // NOTE - see https://www.json.org/json-en.html for details of JSON decoding
 pub fn parse(allocator: Allocator, reader: AnyReader) !JsonValue {
     var array_list = ArrayList(u8).init(allocator);
@@ -38,6 +38,10 @@ pub fn parse(allocator: Allocator, reader: AnyReader) !JsonValue {
             const maybe_keyword = array_list.items;
             if (std.mem.eql(u8, maybe_keyword, "null")) {
                 return JsonValue.NULL;
+            } else if (std.mem.eql(u8, maybe_keyword, "true")) {
+                return JsonValue{ .BOOLEAN = true };
+            } else if (std.mem.eql(u8, maybe_keyword, "false")) {
+                return JsonValue{ .BOOLEAN = false };
             } else {
                 return ParseError.InvalidKeyword;
             }
@@ -105,7 +109,48 @@ test "should parse null whitespace" {
     const result = parse(test_allocator, fixedBufferStream.reader().any());
     try expectEqual(JsonValue.NULL, result);
 }
-test "should throw on near miss null" {
+
+test "should parse true EOS" {
+    var input = ArrayList(u8).init(test_allocator);
+    defer input.deinit();
+    _ = try input.writer().write("true");
+
+    var fixedBufferStream = std.io.fixedBufferStream(input.items);
+    const result = parse(test_allocator, fixedBufferStream.reader().any());
+    try expectEqual(JsonValue{ .BOOLEAN = true }, result);
+}
+
+test "should parse true whitespace" {
+    var input = ArrayList(u8).init(test_allocator);
+    defer input.deinit();
+    _ = try input.writer().write("true ");
+
+    var fixedBufferStream = std.io.fixedBufferStream(input.items);
+    const result = parse(test_allocator, fixedBufferStream.reader().any());
+    try expectEqual(JsonValue{ .BOOLEAN = true }, result);
+}
+
+test "should parse false EOS" {
+    var input = ArrayList(u8).init(test_allocator);
+    defer input.deinit();
+    _ = try input.writer().write("false");
+
+    var fixedBufferStream = std.io.fixedBufferStream(input.items);
+    const result = parse(test_allocator, fixedBufferStream.reader().any());
+    try expectEqual(JsonValue{ .BOOLEAN = false }, result);
+}
+
+test "should parse false whitespace" {
+    var input = ArrayList(u8).init(test_allocator);
+    defer input.deinit();
+    _ = try input.writer().write("false\n");
+
+    var fixedBufferStream = std.io.fixedBufferStream(input.items);
+    const result = parse(test_allocator, fixedBufferStream.reader().any());
+    try expectEqual(JsonValue{ .BOOLEAN = false }, result);
+}
+
+test "should throw on keyword near miss" {
     var input = ArrayList(u8).init(test_allocator);
     defer input.deinit();
     _ = try input.writer().write("nulll");
@@ -114,7 +159,7 @@ test "should throw on near miss null" {
     try expectEqual(ParseError.InvalidKeyword, result);
 }
 
-test "should throw on EOS mid null" {
+test "should throw on EOS mid keyword" {
     var input = ArrayList(u8).init(test_allocator);
     defer input.deinit();
     _ = try input.writer().write("nul");
