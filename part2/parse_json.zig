@@ -47,21 +47,24 @@ pub fn parse(allocator: Allocator, reader: AnyReader) !JsonValue {
             }
         }
 
-        // parse object
-        if (byte == '{') {
-            return parseObject(allocator, reader);
+        // parse number
+        // NOTE - doesn't strictly enforce the json spec. Should correctly parse any valid number, including scientific notation, but will also successfully parse invalid numbers with unnecessary leading zeroes.
+        if (ascii.isDigit(byte) or byte == '-') {
+            while (!ascii.isWhitespace(byte)) {
+                try array_list.append(byte);
+                maybe_byte = reader.readByte();
+                if (maybe_byte == error.EndOfStream) {
+                    break;
+                }
+                byte = try maybe_byte;
+            }
+            const number = try std.fmt.parseFloat(f64, array_list.items);
+            return JsonValue{ .NUMBER = number };
         }
 
         try array_list.append(byte);
     }
-
     @panic("Unimplemented");
-}
-
-fn parseObject(allocator: Allocator, reader: AnyReader) !JsonValue {
-    _ = allocator;
-    _ = reader;
-    @panic("Unimplemented json object parser");
 }
 
 pub const JsonValueType = enum {
@@ -166,4 +169,58 @@ test "should throw on EOS mid keyword" {
     var fixedBufferStream = std.io.fixedBufferStream(input.items);
     const result = parse(test_allocator, fixedBufferStream.reader().any());
     try expectEqual(ParseError.InvalidKeyword, result);
+}
+
+test "should parse int to f64" {
+    var input = ArrayList(u8).init(test_allocator);
+    defer input.deinit();
+    _ = try input.writer().write("123");
+    var fixedBufferStream = std.io.fixedBufferStream(input.items);
+    const result = parse(test_allocator, fixedBufferStream.reader().any());
+    try expectEqual(JsonValue{ .NUMBER = 123 }, result);
+}
+
+test "should parse float to f64" {
+    var input = ArrayList(u8).init(test_allocator);
+    defer input.deinit();
+    _ = try input.writer().write("123.456");
+    var fixedBufferStream = std.io.fixedBufferStream(input.items);
+    const result = parse(test_allocator, fixedBufferStream.reader().any());
+    try expectEqual(JsonValue{ .NUMBER = 123.456 }, result);
+}
+
+test "should parse int with leading zeroes" {
+    var input = ArrayList(u8).init(test_allocator);
+    defer input.deinit();
+    _ = try input.writer().write("0004520");
+    var fixedBufferStream = std.io.fixedBufferStream(input.items);
+    const result = parse(test_allocator, fixedBufferStream.reader().any());
+    try expectEqual(JsonValue{ .NUMBER = 4520 }, result);
+}
+
+test "should parse float with leading zero" {
+    var input = ArrayList(u8).init(test_allocator);
+    defer input.deinit();
+    _ = try input.writer().write("0.258");
+    var fixedBufferStream = std.io.fixedBufferStream(input.items);
+    const result = parse(test_allocator, fixedBufferStream.reader().any());
+    try expectEqual(JsonValue{ .NUMBER = 0.258 }, result);
+}
+
+test "should parse float with leading zeroes" {
+    var input = ArrayList(u8).init(test_allocator);
+    defer input.deinit();
+    _ = try input.writer().write("000003.69");
+    var fixedBufferStream = std.io.fixedBufferStream(input.items);
+    const result = parse(test_allocator, fixedBufferStream.reader().any());
+    try expectEqual(JsonValue{ .NUMBER = 3.69 }, result);
+}
+
+test "should parse float in scientific notation" {
+    var input = ArrayList(u8).init(test_allocator);
+    defer input.deinit();
+    _ = try input.writer().write("2e-2");
+    var fixedBufferStream = std.io.fixedBufferStream(input.items);
+    const result = parse(test_allocator, fixedBufferStream.reader().any());
+    try expectEqual(JsonValue{ .NUMBER = 0.02 }, result);
 }
