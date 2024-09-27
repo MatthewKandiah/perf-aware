@@ -64,8 +64,10 @@ pub fn parse(allocator: Allocator, reader: AnyReader) !JsonValue {
 
         if (byte == '"') {
             try parseString(reader, &array_list);
-            // TODO - this slice is going to be invalidated when the backing array list gets deinitialised
-            return JsonValue{ .STRING = array_list.items };
+            const output = try allocator.alloc(u8, array_list.items.len);
+            std.mem.copyForwards(u8, output, array_list.items);
+            // Note - this will need to be freed by caller
+            return JsonValue{ .STRING = output };
         }
 
         try array_list.append(byte);
@@ -73,6 +75,9 @@ pub fn parse(allocator: Allocator, reader: AnyReader) !JsonValue {
     @panic("Unimplemented");
 }
 
+// TODO - this will parse escaped character as separate characters
+// e.g. \n will be parsed as '\' and 'n', when we want '\n'
+// NOTE - doesn't strictly enforce the json spec. Should correctly parse any valid stri but will also successfully parse invalid strings with newlines in them.
 fn parseString(reader: AnyReader, array_list: *ArrayList(u8)) !void {
     var byte = try reader.readByte();
     while (byte != '"' or array_list.getLastOrNull() == '\\') {
@@ -104,6 +109,7 @@ pub const JsonValue = union(JsonValueType) {
     NULL: void,
 };
 
+const expect = std.testing.expect;
 const expectEqual = std.testing.expectEqual;
 const test_allocator = std.testing.allocator;
 
@@ -251,8 +257,19 @@ test "should parse negative number" {
 test "should parse string" {
     var input = ArrayList(u8).init(test_allocator);
     defer input.deinit();
-    _ = try input.writer().write("\"test string with nothing complicated just letters\"");
+    _ = try input.writer().write("\"test\"");
     var fixedBufferStream = std.io.fixedBufferStream(input.items);
-    const result = parse(test_allocator, fixedBufferStream.reader().any());
-    try expectEqual(JsonValue{ .STRING = "test string with nothing complicated just letters" }, result);
+    const result = try parse(test_allocator, fixedBufferStream.reader().any());
+    try expect(std.mem.eql(u8, "test", result.STRING));
+    test_allocator.free(result.STRING);
+}
+
+test "should parse string with whitespace" {
+    var input = ArrayList(u8).init(test_allocator);
+    defer input.deinit();
+    _ = try input.writer().write("\" t e s t \"");
+    var fixedBufferStream = std.io.fixedBufferStream(input.items);
+    const result = try parse(test_allocator, fixedBufferStream.reader().any());
+    try expect(std.mem.eql(u8, " t e s t ", result.STRING));
+    test_allocator.free(result.STRING);
 }
