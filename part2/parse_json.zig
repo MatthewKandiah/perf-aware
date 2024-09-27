@@ -62,9 +62,23 @@ pub fn parse(allocator: Allocator, reader: AnyReader) !JsonValue {
             return JsonValue{ .NUMBER = number };
         }
 
+        if (byte == '"') {
+            try parseString(reader, &array_list);
+            // TODO - this slice is going to be invalidated when the backing array list gets deinitialised
+            return JsonValue{ .STRING = array_list.items };
+        }
+
         try array_list.append(byte);
     }
     @panic("Unimplemented");
+}
+
+fn parseString(reader: AnyReader, array_list: *ArrayList(u8)) !void {
+    var byte = try reader.readByte();
+    while (byte != '"' or array_list.getLastOrNull() == '\\') {
+        try array_list.append(byte);
+        byte = try reader.readByte();
+    }
 }
 
 pub const JsonValueType = enum {
@@ -232,4 +246,13 @@ test "should parse negative number" {
     var fixedBufferStream = std.io.fixedBufferStream(input.items);
     const result = parse(test_allocator, fixedBufferStream.reader().any());
     try expectEqual(JsonValue{ .NUMBER = -987.654321 }, result);
+}
+
+test "should parse string" {
+    var input = ArrayList(u8).init(test_allocator);
+    defer input.deinit();
+    _ = try input.writer().write("\"test string with nothing complicated just letters\"");
+    var fixedBufferStream = std.io.fixedBufferStream(input.items);
+    const result = parse(test_allocator, fixedBufferStream.reader().any());
+    try expectEqual(JsonValue{ .STRING = "test string with nothing complicated just letters" }, result);
 }
