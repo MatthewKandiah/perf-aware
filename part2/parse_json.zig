@@ -80,6 +80,7 @@ pub fn parse(allocator: Allocator, reader: AnyReader) !JsonValue {
 // NOTE - doesn't strictly enforce the json spec. Should correctly parse any valid stri but will also successfully parse invalid strings with newlines in them.
 fn parseString(reader: AnyReader, array_list: *ArrayList(u8)) !void {
     var byte = try reader.readByte();
+    // TODO - if we start swallowing the escaping \ and not writing it to the array list, this condition won't work
     while (byte != '"' or array_list.getLastOrNull() == '\\') {
         try array_list.append(byte);
         byte = try reader.readByte();
