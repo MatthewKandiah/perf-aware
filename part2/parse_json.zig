@@ -75,14 +75,26 @@ pub fn parse(allocator: Allocator, reader: AnyReader) !JsonValue {
     @panic("Unimplemented");
 }
 
-// TODO - this will parse escaped character as separate characters
-// e.g. \n will be parsed as '\' and 'n', when we want '\n'
 // NOTE - doesn't strictly enforce the json spec. Should correctly parse any valid stri but will also successfully parse invalid strings with newlines in them.
 fn parseString(reader: AnyReader, array_list: *ArrayList(u8)) !void {
+    var is_escaped = false;
     var byte = try reader.readByte();
-    // TODO - if we start swallowing the escaping \ and not writing it to the array list, this condition won't work
-    while (byte != '"' or array_list.getLastOrNull() == '\\') {
-        try array_list.append(byte);
+    while (byte != '"' or is_escaped) {
+        if (is_escaped) {
+            is_escaped = false;
+            try array_list.append(switch (byte) {
+                'n' => '\n',
+                'r' => '\r',
+                't' => '\t',
+                else => byte, // NOTE - pretty sure this doesn't handle a bunch of escaped characters properly, but hopefully it's good enough for the exercises
+            });
+        } else if (byte == '\\') {
+            is_escaped = true;
+        } else if (byte == '"') {
+            return;
+        } else {
+            try array_list.append(byte);
+        }
         byte = try reader.readByte();
     }
 }
