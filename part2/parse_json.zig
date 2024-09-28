@@ -62,6 +62,7 @@ pub fn parse(allocator: Allocator, reader: AnyReader) !JsonValue {
             return JsonValue{ .NUMBER = number };
         }
 
+        // parse string
         if (byte == '"') {
             try parseString(reader, &array_list);
             const output = try allocator.alloc(u8, array_list.items.len);
@@ -70,9 +71,20 @@ pub fn parse(allocator: Allocator, reader: AnyReader) !JsonValue {
             return JsonValue{ .STRING = output };
         }
 
+        // parse object
+        if (byte == '{') {
+            // TODO
+        }
+
+        // parse array
+        if (byte == '[') {
+            // TODO
+        }
+
         try array_list.append(byte);
     }
-    @panic("Unimplemented");
+
+    return error.InvalidJsonValue;
 }
 
 // NOTE - doesn't strictly enforce the json spec. Should correctly parse any valid stri but will also successfully parse invalid strings with newlines in them.
