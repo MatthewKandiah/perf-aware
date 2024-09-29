@@ -11,8 +11,6 @@ pub const ParseError = error{
     InvalidKeyword,
 };
 
-// NOTE - planning on passing in an arena allocator, so we'll allocate all the memory we need for recursive calls, then clear the whole lot
-
 // NOTE - see https://www.json.org/json-en.html for details of JSON decoding
 pub fn parse(allocator: Allocator, reader: *AnyReader) !JsonValue {
     var array_list = ArrayList(u8).init(allocator);
