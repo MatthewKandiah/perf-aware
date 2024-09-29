@@ -14,7 +14,7 @@ pub const ParseError = error{
 // NOTE - planning on passing in an arena allocator, so we'll allocate all the memory we need for recursive calls, then clear the whole lot
 
 // NOTE - see https://www.json.org/json-en.html for details of JSON decoding
-pub fn parse(allocator: Allocator, reader: AnyReader) !JsonValue {
+pub fn parse(allocator: Allocator, reader: *AnyReader) !JsonValue {
     var array_list = ArrayList(u8).init(allocator);
     defer array_list.deinit();
     var maybe_byte = reader.readByte();
@@ -100,7 +100,7 @@ pub fn parse(allocator: Allocator, reader: AnyReader) !JsonValue {
 }
 
 // NOTE - doesn't strictly enforce the json spec. Should correctly parse any valid stri but will also successfully parse invalid strings with newlines in them.
-fn parseString(reader: AnyReader, array_list: *ArrayList(u8)) !void {
+fn parseString(reader: *AnyReader, array_list: *ArrayList(u8)) !void {
     var is_escaped = false;
     var byte = try reader.readByte();
     while (byte != '"' or is_escaped) {
@@ -124,7 +124,7 @@ fn parseString(reader: AnyReader, array_list: *ArrayList(u8)) !void {
 }
 
 // NOTE - again doesn't enforce the spec, just aims to correctly parse any valid input
-fn parseField(reader: AnyReader, array_list: *ArrayList(u8)) !void {
+fn parseField(reader: *AnyReader, array_list: *ArrayList(u8)) !void {
     var byte = try reader.readByte();
     while (byte != '"') {
         try array_list.append(byte);
@@ -165,7 +165,8 @@ test "should parse null EOS" {
     _ = try input.writer().write("null");
 
     var fixedBufferStream = std.io.fixedBufferStream(input.items);
-    const result = parse(test_allocator, fixedBufferStream.reader().any());
+    var reader = fixedBufferStream.reader().any();
+    const result = parse(test_allocator, &reader);
     try expectEqual(JsonValue.NULL, result);
 }
 
@@ -175,7 +176,8 @@ test "should parse null whitespace" {
     _ = try input.writer().write("null ");
 
     var fixedBufferStream = std.io.fixedBufferStream(input.items);
-    const result = parse(test_allocator, fixedBufferStream.reader().any());
+    var reader = fixedBufferStream.reader().any();
+    const result = parse(test_allocator, &reader);
     try expectEqual(JsonValue.NULL, result);
 }
 
@@ -185,7 +187,8 @@ test "should parse true EOS" {
     _ = try input.writer().write("true");
 
     var fixedBufferStream = std.io.fixedBufferStream(input.items);
-    const result = parse(test_allocator, fixedBufferStream.reader().any());
+    var reader = fixedBufferStream.reader().any();
+    const result = parse(test_allocator, &reader);
     try expectEqual(JsonValue{ .BOOLEAN = true }, result);
 }
 
@@ -195,7 +198,8 @@ test "should parse true whitespace" {
     _ = try input.writer().write("true ");
 
     var fixedBufferStream = std.io.fixedBufferStream(input.items);
-    const result = parse(test_allocator, fixedBufferStream.reader().any());
+    var reader = fixedBufferStream.reader().any();
+    const result = parse(test_allocator, &reader);
     try expectEqual(JsonValue{ .BOOLEAN = true }, result);
 }
 
@@ -205,7 +209,8 @@ test "should parse false EOS" {
     _ = try input.writer().write("false");
 
     var fixedBufferStream = std.io.fixedBufferStream(input.items);
-    const result = parse(test_allocator, fixedBufferStream.reader().any());
+    var reader = fixedBufferStream.reader().any();
+    const result = parse(test_allocator, &reader);
     try expectEqual(JsonValue{ .BOOLEAN = false }, result);
 }
 
@@ -215,7 +220,8 @@ test "should parse false whitespace" {
     _ = try input.writer().write("false\n");
 
     var fixedBufferStream = std.io.fixedBufferStream(input.items);
-    const result = parse(test_allocator, fixedBufferStream.reader().any());
+    var reader = fixedBufferStream.reader().any();
+    const result = parse(test_allocator, &reader);
     try expectEqual(JsonValue{ .BOOLEAN = false }, result);
 }
 
@@ -224,7 +230,8 @@ test "should throw on keyword near miss" {
     defer input.deinit();
     _ = try input.writer().write("nulll");
     var fixedBufferStream = std.io.fixedBufferStream(input.items);
-    const result = parse(test_allocator, fixedBufferStream.reader().any());
+    var reader = fixedBufferStream.reader().any();
+    const result = parse(test_allocator, &reader);
     try expectEqual(ParseError.InvalidKeyword, result);
 }
 
@@ -233,7 +240,8 @@ test "should throw on EOS mid keyword" {
     defer input.deinit();
     _ = try input.writer().write("nul");
     var fixedBufferStream = std.io.fixedBufferStream(input.items);
-    const result = parse(test_allocator, fixedBufferStream.reader().any());
+    var reader = fixedBufferStream.reader().any();
+    const result = parse(test_allocator, &reader);
     try expectEqual(ParseError.InvalidKeyword, result);
 }
 
@@ -242,7 +250,8 @@ test "should parse int to f64" {
     defer input.deinit();
     _ = try input.writer().write("123");
     var fixedBufferStream = std.io.fixedBufferStream(input.items);
-    const result = parse(test_allocator, fixedBufferStream.reader().any());
+    var reader = fixedBufferStream.reader().any();
+    const result = parse(test_allocator, &reader);
     try expectEqual(JsonValue{ .NUMBER = 123 }, result);
 }
 
@@ -251,7 +260,8 @@ test "should parse float to f64" {
     defer input.deinit();
     _ = try input.writer().write("123.456");
     var fixedBufferStream = std.io.fixedBufferStream(input.items);
-    const result = parse(test_allocator, fixedBufferStream.reader().any());
+    var reader = fixedBufferStream.reader().any();
+    const result = parse(test_allocator, &reader);
     try expectEqual(JsonValue{ .NUMBER = 123.456 }, result);
 }
 
@@ -260,7 +270,8 @@ test "should parse int with leading zeroes" {
     defer input.deinit();
     _ = try input.writer().write("0004520");
     var fixedBufferStream = std.io.fixedBufferStream(input.items);
-    const result = parse(test_allocator, fixedBufferStream.reader().any());
+    var reader = fixedBufferStream.reader().any();
+    const result = parse(test_allocator, &reader);
     try expectEqual(JsonValue{ .NUMBER = 4520 }, result);
 }
 
@@ -269,7 +280,8 @@ test "should parse float with leading zero" {
     defer input.deinit();
     _ = try input.writer().write("0.258");
     var fixedBufferStream = std.io.fixedBufferStream(input.items);
-    const result = parse(test_allocator, fixedBufferStream.reader().any());
+    var reader = fixedBufferStream.reader().any();
+    const result = parse(test_allocator, &reader);
     try expectEqual(JsonValue{ .NUMBER = 0.258 }, result);
 }
 
@@ -278,7 +290,8 @@ test "should parse float with leading zeroes" {
     defer input.deinit();
     _ = try input.writer().write("000003.69");
     var fixedBufferStream = std.io.fixedBufferStream(input.items);
-    const result = parse(test_allocator, fixedBufferStream.reader().any());
+    var reader = fixedBufferStream.reader().any();
+    const result = parse(test_allocator, &reader);
     try expectEqual(JsonValue{ .NUMBER = 3.69 }, result);
 }
 
@@ -287,7 +300,8 @@ test "should parse float in scientific notation" {
     defer input.deinit();
     _ = try input.writer().write("2e-2");
     var fixedBufferStream = std.io.fixedBufferStream(input.items);
-    const result = parse(test_allocator, fixedBufferStream.reader().any());
+    var reader = fixedBufferStream.reader().any();
+    const result = parse(test_allocator, &reader);
     try expectEqual(JsonValue{ .NUMBER = 0.02 }, result);
 }
 
@@ -296,7 +310,8 @@ test "should parse negative number" {
     defer input.deinit();
     _ = try input.writer().write("-987.654321");
     var fixedBufferStream = std.io.fixedBufferStream(input.items);
-    const result = parse(test_allocator, fixedBufferStream.reader().any());
+    var reader = fixedBufferStream.reader().any();
+    const result = parse(test_allocator, &reader);
     try expectEqual(JsonValue{ .NUMBER = -987.654321 }, result);
 }
 
@@ -305,7 +320,8 @@ test "should parse string" {
     defer input.deinit();
     _ = try input.writer().write("\"test\"");
     var fixedBufferStream = std.io.fixedBufferStream(input.items);
-    const result = try parse(test_allocator, fixedBufferStream.reader().any());
+    var reader = fixedBufferStream.reader().any();
+    const result = try parse(test_allocator, &reader);
     try expect(std.mem.eql(u8, "test", result.STRING));
     test_allocator.free(result.STRING);
 }
@@ -315,7 +331,8 @@ test "should parse string with whitespace" {
     defer input.deinit();
     _ = try input.writer().write("\" t e s t \"");
     var fixedBufferStream = std.io.fixedBufferStream(input.items);
-    const result = try parse(test_allocator, fixedBufferStream.reader().any());
+    var reader = fixedBufferStream.reader().any();
+    const result = try parse(test_allocator, &reader);
     try expect(std.mem.eql(u8, " t e s t ", result.STRING));
     test_allocator.free(result.STRING);
 }
@@ -325,7 +342,8 @@ test "should parse string with escaped characters" {
     defer input.deinit();
     _ = try input.writer().write("\"\\n\\t\"");
     var fixedBufferStream = std.io.fixedBufferStream(input.items);
-    const result = try parse(test_allocator, fixedBufferStream.reader().any());
+    var reader = fixedBufferStream.reader().any();
+    const result = try parse(test_allocator, &reader);
     try expect(std.mem.eql(u8, "\n\t", result.STRING));
     test_allocator.free(result.STRING);
 }
@@ -335,7 +353,8 @@ test "should parse string with escaped quotation marks in it" {
     defer input.deinit();
     _ = try input.writer().write("\"left \\\" right\"");
     var fixedBufferStream = std.io.fixedBufferStream(input.items);
-    const result = try parse(test_allocator, fixedBufferStream.reader().any());
+    var reader = fixedBufferStream.reader().any();
+    const result = try parse(test_allocator, &reader);
     try expect(std.mem.eql(u8, "left \" right", result.STRING));
     test_allocator.free(result.STRING);
 }
