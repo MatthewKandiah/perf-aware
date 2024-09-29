@@ -73,7 +73,19 @@ pub fn parse(allocator: Allocator, reader: AnyReader) !JsonValue {
 
         // parse object
         if (byte == '{') {
-            // TODO
+            byte = try reader.readByte();
+            while (ascii.isWhitespace(byte)) {
+                byte = try reader.readByte();
+            }
+            while (true) {
+                try parseField(reader, &array_list);
+                while (ascii.isWhitespace(byte)) {
+                    byte = try reader.readByte();
+                }
+                // TODO - does this need to take a pointer to reader so calling readByte in the recursive call advances the file position here too?
+                const value = try parse(allocator, reader);
+                _ = value;
+            }
         }
 
         // parse array
@@ -107,6 +119,15 @@ fn parseString(reader: AnyReader, array_list: *ArrayList(u8)) !void {
         } else {
             try array_list.append(byte);
         }
+        byte = try reader.readByte();
+    }
+}
+
+// NOTE - again doesn't enforce the spec, just aims to correctly parse any valid input
+fn parseField(reader: AnyReader, array_list: *ArrayList(u8)) !void {
+    var byte = try reader.readByte();
+    while (byte != '"') {
+        try array_list.append(byte);
         byte = try reader.readByte();
     }
 }
