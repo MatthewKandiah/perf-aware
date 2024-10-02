@@ -1,13 +1,14 @@
 const std = @import("std");
-const parse_json = @import("parse_json.zig");
+const parse = @import("parse_json.zig");
 
 pub fn main() !void {
-    std.debug.print("Scratch program for testing\n\n", .{});
-
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    const allocator = gpa.allocator();
+    defer _ = gpa.deinit();
+    const gpa_allocator = gpa.allocator();
 
-    const file = try std.fs.cwd().openFile("data_1_10.json", .{});
-    const reader = file.reader();
-    _ = try parse_json.parse(allocator, reader.any());
+    var arena = std.heap.ArenaAllocator.init(gpa_allocator);
+    defer _ = arena.reset(.free_all);
+    const arena_allocator = arena.allocator();
+    const result = try parse.parseFile(arena_allocator, "data_1_10.json");
+    std.debug.print("result:\n{any}\n", .{result});
 }
