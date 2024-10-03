@@ -1,4 +1,5 @@
 const std = @import("std");
+const lib = @import("haversine.zig");
 
 // not got the time to write a real generic json parser
 // going to write something minimal that can extract values from the generated input to use for the following exercises
@@ -107,6 +108,15 @@ pub fn parseFile(allocator: std.mem.Allocator, filename: []const u8) ![]Haversin
     const file = try std.fs.cwd().openFile(filename, .{});
     const reader = file.reader();
     return parse(allocator, reader.any());
+}
+
+pub fn haversineSumForFile(allocator: std.mem.Allocator, filename: []const u8) !void {
+    const data = try parseFile(allocator, filename);
+    var result: f64 = 0;
+    for (data) |h| {
+        result += lib.haversine(h.x0, h.y0, h.x1, h.y1, lib.EARTH_RADIUS_KM);
+    }
+    std.debug.print("haversine_sum: {}\n", .{result});
 }
 
 pub const HaversineData = struct {

@@ -9,6 +9,14 @@ pub fn main() !void {
     var arena = std.heap.ArenaAllocator.init(gpa_allocator);
     defer _ = arena.reset(.free_all);
     const arena_allocator = arena.allocator();
-    const result = try parse.parseFile(arena_allocator, "data_1_10.json");
-    std.debug.print("result:\n{any}\n", .{result});
+
+    const args = std.process.argsAlloc(arena_allocator) catch std.process.exit(1);
+    if (args.len != 2) {
+        std.debug.print("USAGE: must pass path to input data file\n", .{});
+        std.process.exit(1);
+    }
+
+    const file_name = args[1];
+
+    try parse.haversineSumForFile(arena_allocator, file_name);
 }
