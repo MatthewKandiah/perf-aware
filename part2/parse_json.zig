@@ -110,13 +110,13 @@ pub fn parseFile(allocator: std.mem.Allocator, filename: []const u8) ![]Haversin
     return parse(allocator, reader.any());
 }
 
-pub fn haversineSumForFile(allocator: std.mem.Allocator, filename: []const u8) !void {
+pub fn haversineSumForFile(allocator: std.mem.Allocator, filename: []const u8) !f64 {
     const data = try parseFile(allocator, filename);
     var result: f64 = 0;
     for (data) |h| {
         result += lib.haversine(h.x0, h.y0, h.x1, h.y1, lib.EARTH_RADIUS_KM);
     }
-    std.debug.print("haversine_sum: {}\n", .{result});
+    return result;
 }
 
 pub const HaversineData = struct {

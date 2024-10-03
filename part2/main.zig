@@ -18,5 +18,6 @@ pub fn main() !void {
 
     const file_name = args[1];
 
-    try parse.haversineSumForFile(arena_allocator, file_name);
+    const sum = try parse.haversineSumForFile(arena_allocator, file_name);
+    std.debug.print("sum: {d}\n", .{sum});
 }
