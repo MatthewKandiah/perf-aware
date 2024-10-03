@@ -2,8 +2,6 @@
 //
 // Generate random json input for exercises.
 // Must take argument for number of pairs to generate.
-// Casey recommends adding some clustering in the data generation, so the randomly generated points don't have a predictable sum / average. Done this.
-// He also suggests having the generator print out the expected sum and dumping the expected values to a binary data file for quick debugging and checking. Not bothering with this until it feels useful.
 //
 //
 // Json schema:
@@ -20,8 +18,12 @@
 //
 
 const std = @import("std");
+const haversine = @import("haversine.zig").haversine;
+const radius_km = @import("haversine.zig").EARTH_RADIUS_KM;
 
 pub fn main() void {
+    const stdout = std.io.getStdOut().writer();
+
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const allocator = gpa.allocator();
     defer _ = gpa.deinit();
@@ -33,6 +35,7 @@ pub fn main() void {
 
     const seed = std.fmt.parseInt(u64, args[1], 10) catch fatal("USAGE: seed argument must be non-negative integer");
     const pair_count = std.fmt.parseInt(u32, args[2], 10) catch fatal("USAGE: pair_count argument must be non-negative integer");
+    stdout.print("seed: {}\npair_count: {}\n", .{ seed, pair_count }) catch fatal(null);
 
     const output_file_name = std.fmt.allocPrint(allocator, "data_{}_{}.json", .{ seed, pair_count }) catch fatal(null);
     const output_file = std.fs.cwd().createFile(output_file_name, .{}) catch fatal("Failed to open output file");
@@ -45,13 +48,16 @@ pub fn main() void {
     _ = writer.write("{\"pairs\": [\n") catch fatal(null);
     const min_degrees = rand.float(f64) * (-180);
     const max_degrees = rand.float(f64) * 180;
-    std.debug.print("min_degrees: {d:0>3}\nmax_degrees: {d:0>3}", .{ min_degrees, max_degrees });
+    stdout.print("min_degress: {d:0>3}\nmax_degrees: {d:0>3}\n", .{ min_degrees, max_degrees }) catch fatal(null);
+
     var print_buf: [1024]u8 = undefined;
+    var expected_sum: f64 = 0;
     for (0..pair_count) |i| {
         const x0 = generatePointInRange(rand, min_degrees, max_degrees);
         const y0 = generatePointInRange(rand, min_degrees, max_degrees) / 2;
         const x1 = generatePointInRange(rand, min_degrees, max_degrees);
         const y1 = generatePointInRange(rand, min_degrees, max_degrees) / 2;
+        expected_sum += haversine(x0, y0, x1, y1, radius_km);
         const line = std.fmt.bufPrint(&print_buf, "\t{{\"x0\":{d:0>12}, \"y0\":{d:0>12}, \"x1\":{d:0>12}, \"y1\":{d:0>12}}}", .{ x0, y0, x1, y1 }) catch fatal(null);
         _ = writer.write(line) catch fatal(null);
         if (i < pair_count - 1) {
@@ -62,6 +68,7 @@ pub fn main() void {
     }
     _ = writer.write("]}\n") catch fatal(null);
     output_file.close();
+    stdout.print("expected_sum: {d}\n", .{expected_sum}) catch fatal(null);
 }
 
 fn generatePointInRange(rand: std.Random, min: f64, max: f64) f64 {
