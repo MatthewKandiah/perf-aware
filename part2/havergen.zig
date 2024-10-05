@@ -58,7 +58,7 @@ pub fn main() void {
         const x1 = generatePointInRange(rand, min_degrees, max_degrees);
         const y1 = generatePointInRange(rand, min_degrees, max_degrees) / 2;
         expected_sum += haversine(x0, y0, x1, y1, radius_km);
-        const line = std.fmt.bufPrint(&print_buf, "\t{{\"x0\":{d:0>12}, \"y0\":{d:0>12}, \"x1\":{d:0>12}, \"y1\":{d:0>12}}}", .{ x0, y0, x1, y1 }) catch fatal(null);
+        const line = std.fmt.bufPrint(&print_buf, "\t{{\"x0\":{d:0<12}, \"y0\":{d:0<12}, \"x1\":{d:0<12}, \"y1\":{d:0<12}}}", .{ x0, y0, x1, y1 }) catch fatal(null);
         _ = writer.write(line) catch fatal(null);
         if (i < pair_count - 1) {
             _ = writer.write(",\n") catch fatal(null);
